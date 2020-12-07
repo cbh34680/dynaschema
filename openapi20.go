@@ -45,7 +45,7 @@ func (me *SchemaOpenAPI20) ValidateJSONRequestBody(argPath, argMethod, argJSON s
 
 	dataLoader := gojsonschema.NewStringLoader(argJSON)
 
-	var result *gojsonschema.Result = &gojsonschema.Result{}
+	var lastResult *gojsonschema.Result = &gojsonschema.Result{}
 
 	parameters.EachArray(func(pos int, spec *dynajson.JSONElement) (bool, error) {
 
@@ -65,15 +65,19 @@ func (me *SchemaOpenAPI20) ValidateJSONRequestBody(argPath, argMethod, argJSON s
 
 		schemaLoader := gojsonschema.NewStringLoader(schema.String())
 
-		tmpResult, err := gojsonschema.Validate(schemaLoader, dataLoader)
+		result, err := gojsonschema.Validate(schemaLoader, dataLoader)
 		if err != nil {
 			return false, fmt.Errorf("gojsonschema.Validate: %w", err)
 		}
 
-		result = tmpResult
+		lastResult = result
+
+		if !result.Valid() {
+			return false, nil
+		}
 
 		return true, nil
 	})
 
-	return result, nil
+	return lastResult, nil
 }
