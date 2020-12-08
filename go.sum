@@ -1,5 +1,7 @@
 github.com/cbh34680/dynajson v0.0.16 h1:c3iM3xCCnj5giVTr93sq//zZrJuXri4NfMSW6m5ecPY=
 github.com/cbh34680/dynajson v0.0.16/go.mod h1:P3uTs2sNcn4K/Q/vfjD9jT0JiCR25m4XUvBheY1PNjQ=
+github.com/cbh34680/dynajson v0.0.17 h1:183fsouMRPO+Bw0JqqsX8vnajQpoyuaNBhXbmujoVYA=
+github.com/cbh34680/dynajson v0.0.17/go.mod h1:P3uTs2sNcn4K/Q/vfjD9jT0JiCR25m4XUvBheY1PNjQ=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

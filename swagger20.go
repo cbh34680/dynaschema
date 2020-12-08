@@ -6,25 +6,22 @@ import (
 	"github.com/cbh34680/dynajson"
 )
 
-// SchemaOpenAPI300 ... func
-type SchemaOpenAPI300 struct {
+// SchemaSwagger20 ... func
+type SchemaSwagger20 struct {
 	SchemaAbstract
 }
 
-// NewSchemaOpenAPI300 ... func
-func NewSchemaOpenAPI300(argJSON *dynajson.JSONElement) JSONSchema {
-	ret := SchemaOpenAPI300{}
+// NewSchemaSwagger20 ... func
+func NewSchemaSwagger20(argJSON *dynajson.JSONElement) JSONSchema {
+	ret := SchemaSwagger20{}
 	ret.SchemaAbstract.objJSON = argJSON
 	return &ret
 }
 
-// String ... func
-func (me *SchemaOpenAPI300) String() string {
-	return me.objJSON.String()
-}
+// ---------------------------------------------------------------------------
 
 // FindParameters ... func
-func (me *SchemaOpenAPI300) FindParameters(argPath, argMethod, argIn string) (string, error) {
+func (me *SchemaSwagger20) FindParameters(argPath, argMethod, argIn string) (string, error) {
 
 	required := dynajson.NewAsArray()
 	properties := dynajson.NewAsMap()
@@ -47,12 +44,6 @@ func (me *SchemaOpenAPI300) FindParameters(argPath, argMethod, argIn string) (st
 			switch key {
 			case "name", "in", "required":
 				break
-			case "schema":
-				val.EachMap(func(sKey string, sVal *dynajson.JSONElement) (bool, error) {
-
-					property[sKey] = sVal.Raw()
-					return true, nil
-				})
 			default:
 				property[key] = val.Raw()
 			}
@@ -90,25 +81,32 @@ func (me *SchemaOpenAPI300) FindParameters(argPath, argMethod, argIn string) (st
 }
 
 // FindBody ... func
-func (me *SchemaOpenAPI300) FindBody(argPath, argMethod, argContent string) (string, error) {
+func (me *SchemaSwagger20) FindBody(argPath, argMethod, _ string) (string, error) {
 
-	root := me.objJSON
+	var schema *dynajson.JSONElement
 
-	requestBody := root.Select("paths", argPath, argMethod, "requestBody")
-	if requestBody.IsNil() {
-		return "", nil
+	err := me.eachParams(argPath, argMethod, "body", func(pos int, spec *dynajson.JSONElement) (bool, error) {
+
+		//
+		// TODO: required
+		//
+
+		chkSchema := spec.Select("schema")
+
+		if chkSchema.IsNil() {
+			return true, nil
+		}
+
+		schema = chkSchema
+
+		return false, nil
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("me.eachParams: %w", err)
 	}
 
-	if !requestBody.IsMap() {
-		return "", fmt.Errorf("not requestBody.IsMap()")
-	}
-
-	//
-	// TODO: requestBody.required
-	//
-
-	schema := requestBody.Select("content", argContent, "schema")
-	if schema.IsNil() {
+	if schema == nil {
 		return "", nil
 	}
 

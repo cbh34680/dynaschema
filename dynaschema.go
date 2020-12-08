@@ -5,20 +5,21 @@ import (
 	"strings"
 
 	"github.com/cbh34680/dynajson"
-	"github.com/xeipuuv/gojsonschema"
 )
 
 // JSONSchema ... struct
 type JSONSchema interface {
 	RawJSON() *dynajson.JSONElement
 	String() string
-	ValidateParameters(string, string, string, map[string]interface{}) (*gojsonschema.Result, error)
-	ValidateJSONRequestBody(string, string, string) (*gojsonschema.Result, error)
+	SetFlag(string, bool)
+	FindParameters(string, string, string) (string, error)
+	FindBody(string, string, string) (string, error)
 }
 
 // SchemaAbstract ... struct
 type SchemaAbstract struct {
 	objJSON *dynajson.JSONElement
+	flagMap map[string]bool
 }
 
 // RawJSON ... func
@@ -29,6 +30,29 @@ func (me *SchemaAbstract) RawJSON() *dynajson.JSONElement {
 // String ... func
 func (me *SchemaAbstract) String() string {
 	return me.objJSON.String()
+}
+
+// SetFlag ... func
+func (me *SchemaAbstract) SetFlag(key string, val bool) {
+	if me.flagMap == nil {
+		me.flagMap = map[string]bool{}
+	}
+
+	me.flagMap[key] = val
+}
+
+// GetFlag ... func
+func (me *SchemaAbstract) GetFlag(key string) bool {
+
+	if me.flagMap == nil {
+		return false
+	}
+
+	if val, ok := me.flagMap[key]; ok {
+		return val
+	}
+
+	return false
 }
 
 // StrMap2AnyMap ... func
@@ -96,7 +120,7 @@ func New(root *dynajson.JSONElement) (JSONSchema, error) {
 
 	switch ver {
 	case "2.0":
-		return NewSchemaOpenAPI20(root), nil
+		return NewSchemaSwagger20(root), nil
 	case "3.0.0":
 		return NewSchemaOpenAPI300(root), nil
 	}
