@@ -9,59 +9,107 @@ import (
 
 // SchemaOpenAPI20 ... func
 type SchemaOpenAPI20 struct {
-	objJSON *dynajson.JSONElement
+	SchemaAbstract
 }
 
 // NewSchemaOpenAPI20 ... func
 func NewSchemaOpenAPI20(argJSON *dynajson.JSONElement) JSONSchema {
-	return &SchemaOpenAPI20{
-		objJSON: argJSON,
+	ret := SchemaOpenAPI20{}
+	ret.SchemaAbstract.objJSON = argJSON
+	return &ret
+}
+
+// ---------------------------------------------------------------------------
+
+// ValidateParameters ... func
+func (me *SchemaOpenAPI20) ValidateParameters(argPath, argMethod, argIn string, argData map[string]interface{}) (*gojsonschema.Result, error) {
+
+	schema := dynajson.NewAsMap()
+	schema.Put("type", "object")
+
+	required, err := schema.PutEmptyArray("required")
+	if err != nil {
+		return nil, fmt.Errorf("schema.PutEmptyArray: %w", err)
 	}
-}
 
-// RawJSON ... func
-func (me *SchemaOpenAPI20) RawJSON() *dynajson.JSONElement {
-	return me.objJSON
-}
+	properties, err := schema.PutEmptyMap("properties")
+	if err != nil {
+		return nil, fmt.Errorf("schema.PutEmptyMap: %w", err)
+	}
 
-// String ... func
-func (me *SchemaOpenAPI20) String() string {
-	return me.objJSON.String()
+	err = me.eachParams(argPath, argMethod, argIn, func(pos int, spec *dynajson.JSONElement) (bool, error) {
+
+		spName := spec.Select("name").AsString()
+		if spName == "" {
+			return false, fmt.Errorf("name is empty")
+		}
+
+		if spec.Select("required").AsBool() {
+			required.Append(spName)
+		}
+
+		property := map[string]interface{}{}
+
+		spec.EachMap(func(key string, val *dynajson.JSONElement) (bool, error) {
+
+			switch key {
+			case "name", "in", "required":
+				break
+			default:
+				property[key] = val.Raw()
+			}
+
+			return true, nil
+		})
+
+		properties.Put(spName, property)
+
+		return true, nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("me.eachParams: %w", err)
+	}
+
+	data := dynajson.New(argData)
+
+	strSchema := schema.String()
+	strData := data.String()
+
+	//fmt.Println(strSchema)
+	//fmt.Println(strData)
+
+	schemaLoader := gojsonschema.NewStringLoader(strSchema)
+	dataLoader := gojsonschema.NewStringLoader(strData)
+
+	result, err := gojsonschema.Validate(schemaLoader, dataLoader)
+	if err != nil {
+		return nil, fmt.Errorf("gojsonschema.Validate: %w", err)
+	}
+
+	return result, nil
 }
 
 // ValidateJSONRequestBody ... func
-func (me *SchemaOpenAPI20) ValidateJSONRequestBody(argPath, argMethod, argJSON string) (*gojsonschema.Result, error) {
+func (me *SchemaOpenAPI20) ValidateJSONRequestBody(argPath, argMethod, argData string) (*gojsonschema.Result, error) {
 
-	root := me.objJSON
-
-	parameters := root.Select("paths", argPath, argMethod, "parameters")
-	if parameters.IsNil() {
-		return nil, fmt.Errorf("parameters: Select return nil")
-	}
-
-	if !parameters.IsArray() {
-		return nil, fmt.Errorf("not parameters.IsArray()")
-	}
-
-	dataLoader := gojsonschema.NewStringLoader(argJSON)
+	dataLoader := gojsonschema.NewStringLoader(argData)
 
 	var lastResult *gojsonschema.Result = &gojsonschema.Result{}
 
-	parameters.EachArray(func(pos int, spec *dynajson.JSONElement) (bool, error) {
-
-		if spec.Select("in").AsString() != "body" {
-			return true, nil
-		}
+	me.eachParams(argPath, argMethod, "body", func(pos int, spec *dynajson.JSONElement) (bool, error) {
 
 		//
 		// TODO: required
 		//
 
 		schema := spec.Select("schema")
-		if schema.IsNil() {
+		if spec.Select("schema").IsNil() {
 			return true, nil
 		}
+
 		//fmt.Println(schema)
+		//fmt.Println(argData)
 
 		schemaLoader := gojsonschema.NewStringLoader(schema.String())
 

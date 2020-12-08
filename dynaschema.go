@@ -12,7 +12,64 @@ import (
 type JSONSchema interface {
 	RawJSON() *dynajson.JSONElement
 	String() string
+	ValidateParameters(string, string, string, map[string]interface{}) (*gojsonschema.Result, error)
 	ValidateJSONRequestBody(string, string, string) (*gojsonschema.Result, error)
+}
+
+// SchemaAbstract ... struct
+type SchemaAbstract struct {
+	objJSON *dynajson.JSONElement
+}
+
+// RawJSON ... func
+func (me *SchemaAbstract) RawJSON() *dynajson.JSONElement {
+	return me.objJSON
+}
+
+// String ... func
+func (me *SchemaAbstract) String() string {
+	return me.objJSON.String()
+}
+
+// StrMap2AnyMap ... func
+func StrMap2AnyMap(arg map[string]string) map[string]interface{} {
+
+	if arg == nil {
+		return nil
+	}
+
+	ret := make(map[string]interface{}, len(arg))
+	for k, v := range arg {
+
+		ret[k] = v
+	}
+	return ret
+}
+
+func (me *SchemaAbstract) eachParams(argPath, argMethod, argIn string, callback func(pos int, spec *dynajson.JSONElement) (bool, error)) error {
+
+	root := me.objJSON
+
+	parameters := root.Select("paths", argPath, argMethod, "parameters")
+	if parameters.IsNil() {
+		return fmt.Errorf("parameters: Select return nil")
+	}
+
+	if !parameters.IsArray() {
+		return fmt.Errorf("not parameters.IsArray()")
+	}
+
+	return parameters.EachArray(func(pos int, spec *dynajson.JSONElement) (bool, error) {
+
+		if argIn != "" {
+			if spec.Select("in").AsString() != argIn {
+
+				return true, nil
+			}
+		}
+
+		return callback(pos, spec)
+	})
 }
 
 // ---------------------------------------------------------------------------
