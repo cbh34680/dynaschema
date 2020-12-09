@@ -12,7 +12,7 @@ type JSONSchema interface {
 	RawJSON() *dynajson.JSONElement
 	String() string
 	SetFlag(string, bool)
-	FindParameters(string, string, string) (string, error)
+	FindParameter(string, string, string) (string, error)
 	FindBody(string, string, string) (string, error)
 }
 
@@ -30,6 +30,15 @@ func (me *SchemaAbstract) RawJSON() *dynajson.JSONElement {
 // String ... func
 func (me *SchemaAbstract) String() string {
 	return me.objJSON.String()
+}
+
+type flagType struct {
+	SetMinlenIfRequired string
+}
+
+// Flag ... var
+var Flag flagType = flagType{
+	SetMinlenIfRequired: "SetMinlenIfRequired",
 }
 
 // SetFlag ... func
@@ -94,6 +103,69 @@ func (me *SchemaAbstract) eachParams(argPath, argMethod, argIn string, callback 
 
 		return callback(pos, spec)
 	})
+}
+
+type findParameterHelperCallback func(*dynajson.JSONElement) map[string]interface{}
+
+func (me *SchemaAbstract) findParameterHelper(argPath, argMethod, argIn string, callback findParameterHelperCallback) (string, error) {
+
+	required := dynajson.NewAsArray()
+	properties := dynajson.NewAsMap()
+
+	err := me.eachParams(argPath, argMethod, argIn, func(pos int, spec *dynajson.JSONElement) (bool, error) {
+
+		spName := spec.Select("name").AsString()
+		if spName == "" {
+			return false, fmt.Errorf("name is empty")
+		}
+
+		spRequired := spec.Select("required").AsBool()
+
+		if spRequired {
+			required.Append(spName)
+		}
+
+		property := callback(spec)
+
+		if spRequired {
+			if me.GetFlag(Flag.SetMinlenIfRequired) {
+				if propType, ok := property["type"]; ok {
+					if propType == "string" {
+						if _, ok := property["minLength"]; !ok {
+							property["minLength"] = 1
+						}
+					}
+				}
+			}
+		}
+
+		properties.Put(spName, property)
+
+		return true, nil
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("me.eachParams: %w", err)
+	}
+
+	if properties.Count() == 0 {
+		return "", nil
+	}
+
+	schema := dynajson.NewAsMap()
+	schema.Put("type", "object")
+
+	err = schema.Put("required", required)
+	if err != nil {
+		return "", fmt.Errorf("schema.Put(required): %w", err)
+	}
+
+	err = schema.Put("properties", properties)
+	if err != nil {
+		return "", fmt.Errorf("schema.Put(properties): %w", err)
+	}
+
+	return schema.String(), nil
 }
 
 // ---------------------------------------------------------------------------
