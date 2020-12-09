@@ -6,25 +6,59 @@ import (
 	"github.com/cbh34680/dynajson"
 )
 
-// SchemaOpenAPI300 ... func
-type SchemaOpenAPI300 struct {
+// SchemaOpenAPI30 ... func
+type SchemaOpenAPI30 struct {
 	SchemaAbstract
 }
 
-// NewSchemaOpenAPI300 ... func
-func NewSchemaOpenAPI300(argJSON *dynajson.JSONElement) JSONSchema {
-	ret := SchemaOpenAPI300{}
+// NewSchemaOpenAPI30 ... func
+func NewSchemaOpenAPI30(argJSON *dynajson.JSONElement) JSONSchema {
+	ret := SchemaOpenAPI30{}
 	ret.SchemaAbstract.objJSON = argJSON
 	return &ret
 }
 
-// String ... func
-func (me *SchemaOpenAPI300) String() string {
-	return me.objJSON.String()
+// ---------------------------------------------------------------------------
+
+// GetServers ... func
+func (me *SchemaOpenAPI30) GetServers() ([]string, error) {
+
+	root := me.objJSON
+
+	servers := root.Select("servers")
+	if servers.IsNil() {
+		return nil, fmt.Errorf("servers undefined")
+	}
+
+	serversLen := servers.Count()
+
+	if serversLen == 0 {
+		return nil, fmt.Errorf("empty servers")
+	}
+
+	ret := make([]string, serversLen)
+
+	err := servers.EachArray(func(pos int, elem *dynajson.JSONElement) (bool, error) {
+
+		url := elem.Select("url")
+		if url.IsNil() {
+			return false, fmt.Errorf("servers(%d): url undefined", pos)
+		}
+
+		ret[pos] = url.AsString()
+
+		return true, nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("servers.EachArray: %w", err)
+	}
+
+	return ret, nil
 }
 
 // FindParameter ... func
-func (me *SchemaOpenAPI300) FindParameter(argPath, argMethod, argIn string) (string, error) {
+func (me *SchemaOpenAPI30) FindParameter(argPath, argMethod, argIn string) (string, error) {
 
 	return me.SchemaAbstract.findParameterHelper(argPath, argMethod, argIn, func(spec *dynajson.JSONElement) map[string]interface{} {
 
@@ -130,7 +164,7 @@ func (me *SchemaOpenAPI300) FindParameter(argPath, argMethod, argIn string) (str
 }
 
 // FindBody ... func
-func (me *SchemaOpenAPI300) FindBody(argPath, argMethod, argContent string) (string, error) {
+func (me *SchemaOpenAPI30) FindBody(argPath, argMethod, argContent string) (string, error) {
 
 	root := me.objJSON
 

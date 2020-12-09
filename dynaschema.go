@@ -12,6 +12,7 @@ type JSONSchema interface {
 	RawJSON() *dynajson.JSONElement
 	String() string
 	SetFlag(string, bool)
+	GetServers() ([]string, error)
 	FindParameter(string, string, string) (string, error)
 	FindBody(string, string, string) (string, error)
 }
@@ -190,11 +191,11 @@ func New(root *dynajson.JSONElement) (JSONSchema, error) {
 
 	root.Readonly = true
 
-	switch ver {
-	case "2.0":
+	switch {
+	case strings.HasPrefix(ver, "2.0"):
 		return NewSchemaSwagger20(root), nil
-	case "3.0.0":
-		return NewSchemaOpenAPI300(root), nil
+	case strings.HasPrefix(ver, "3.0"):
+		return NewSchemaOpenAPI30(root), nil
 	}
 
 	return nil, fmt.Errorf("UnSupported Schema-Version")

@@ -20,6 +20,41 @@ func NewSchemaSwagger20(argJSON *dynajson.JSONElement) JSONSchema {
 
 // ---------------------------------------------------------------------------
 
+// GetServers ... func
+func (me *SchemaSwagger20) GetServers() ([]string, error) {
+
+	root := me.objJSON
+
+	host := root.Select("host")
+	if host.IsNil() {
+		return nil, fmt.Errorf("host undefined")
+	}
+
+	basePath := root.Select("basePath").AsString()
+
+	schemes := root.Select("schemes")
+	schemesLen := schemes.Count()
+
+	if schemesLen == 0 {
+		return nil, fmt.Errorf("empty schemes")
+	}
+
+	ret := make([]string, schemesLen)
+
+	err := schemes.EachArray(func(pos int, scheme *dynajson.JSONElement) (bool, error) {
+
+		ret[pos] = fmt.Sprintf("%s://%s%s", scheme.AsString(), host.AsString(), basePath)
+
+		return true, nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("schemes.EachArray: %w", err)
+	}
+
+	return ret, nil
+}
+
 // FindParameter ... func
 func (me *SchemaSwagger20) FindParameter(argPath, argMethod, argIn string) (string, error) {
 
