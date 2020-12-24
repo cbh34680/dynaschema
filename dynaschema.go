@@ -11,8 +11,10 @@ import (
 type JSONSchema interface {
 	RawJSON() *dynajson.JSONElement
 	String() string
-	SetFlag(string, bool)
-	GetServers() ([]string, error)
+	/*
+		SetFlag(string, bool)
+		GetServers() ([]string, error)
+	*/
 	FindParameter(string, string, string) (string, error)
 	FindBody(string, string, string) (string, error)
 }
@@ -20,7 +22,7 @@ type JSONSchema interface {
 // SchemaAbstract ... struct
 type SchemaAbstract struct {
 	objJSON *dynajson.JSONElement
-	flagMap map[string]bool
+	//flagMap map[string]bool
 }
 
 // RawJSON ... func
@@ -33,6 +35,7 @@ func (me *SchemaAbstract) String() string {
 	return me.objJSON.String()
 }
 
+/*
 type flagType struct {
 	SetMinlenIfRequired string
 }
@@ -64,6 +67,7 @@ func (me *SchemaAbstract) GetFlag(key string) bool {
 
 	return false
 }
+*/
 
 // StrMap2AnyMap ... func
 func StrMap2AnyMap(arg map[string]string) map[string]interface{} {
@@ -308,7 +312,7 @@ func expandRef(root *dynajson.JSONElement) error {
 			return fmt.Errorf("where.Delete($ref): %w", err)
 		}
 
-		where.Put("#original-ref#", refInfo.refVal)
+		//where.Put("#original-ref#", refInfo.refVal)
 
 		update.EachMap(func(k string, v *dynajson.JSONElement) (bool, error) {
 
