@@ -131,7 +131,19 @@ func (me *SchemaAbstract) findParameterHelper(argPath, argMethod, argIn string, 
 		}
 
 		property := callback(spec)
-
+		/*
+			if spRequired {
+				if me.GetFlag(Flag.SetMinlenIfRequired) {
+					if propType, ok := property["type"]; ok {
+						if propType == "string" {
+							if _, ok := property["minLength"]; !ok {
+								property["minLength"] = 1
+							}
+						}
+					}
+				}
+			}
+		*/
 		properties.Put(spName, property)
 
 		return true, nil
@@ -284,17 +296,12 @@ func expandRef(root *dynajson.JSONElement) error {
 			break
 		}
 
-		//fmt.Printf("-%v-\n", refInfo.selKey)
 		where := root.Select(refInfo.selKey)
-		//fmt.Println(where)
-
 		if where.IsNil() {
 			continue
 		}
 
 		update := root.Select(refInfo.getKey)
-		//fmt.Println(update)
-
 		if update.IsNil() {
 			continue
 		}
@@ -311,7 +318,6 @@ func expandRef(root *dynajson.JSONElement) error {
 		if err != nil {
 			return fmt.Errorf("where.Delete($ref): %w", err)
 		}
-
 		//where.Put("#original-ref#", refInfo.refVal)
 
 		update.EachMap(func(k string, v *dynajson.JSONElement) (bool, error) {
