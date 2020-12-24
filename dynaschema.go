@@ -86,7 +86,7 @@ func (me *SchemaAbstract) eachParams(argPath, argMethod, argIn string, callback 
 
 	parameters := root.Select("paths", argPath, argMethod, "parameters")
 	if parameters.IsNil() {
-		return fmt.Errorf("parameters: Select return nil")
+		return fmt.Errorf("%s, %s: not found", argPath, argMethod)
 	}
 
 	if !parameters.IsArray() {
