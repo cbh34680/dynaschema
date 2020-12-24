@@ -128,18 +128,6 @@ func (me *SchemaAbstract) findParameterHelper(argPath, argMethod, argIn string, 
 
 		property := callback(spec)
 
-		if spRequired {
-			if me.GetFlag(Flag.SetMinlenIfRequired) {
-				if propType, ok := property["type"]; ok {
-					if propType == "string" {
-						if _, ok := property["minLength"]; !ok {
-							property["minLength"] = 1
-						}
-					}
-				}
-			}
-		}
-
 		properties.Put(spName, property)
 
 		return true, nil
