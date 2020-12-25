@@ -7,6 +7,18 @@ import (
 	"github.com/cbh34680/dynajson"
 )
 
+// NewOption ... int
+type NewOption int
+
+const (
+	// NoOption ... 0
+	NoOption NewOption = 0
+	// ExpandRef ... 1
+	ExpandRef NewOption = 1 << iota
+	// SetMinlenIfRequired ... 2
+	SetMinlenIfRequired
+)
+
 // JSONSchema ... struct
 type JSONSchema interface {
 	RawJSON() *dynajson.JSONElement
@@ -176,7 +188,7 @@ func (me *SchemaAbstract) findParameterHelper(argPath, argMethod, argIn string, 
 // ---------------------------------------------------------------------------
 
 // New ... func
-func New(root *dynajson.JSONElement) (JSONSchema, error) {
+func New(root *dynajson.JSONElement, opt NewOption) (JSONSchema, error) {
 
 	ver := root.Select("openapi").AsString()
 	if ver == "" {
@@ -186,9 +198,20 @@ func New(root *dynajson.JSONElement) (JSONSchema, error) {
 		}
 	}
 
-	err := expandRef(root)
-	if err != nil {
-		return nil, fmt.Errorf("expandRef: %w", err)
+	if (opt & SetMinlenIfRequired) != 0 {
+
+		err := setMinlenIfRequired(root)
+		if err != nil {
+			return nil, fmt.Errorf("setMinlenIfRequired: %w", err)
+		}
+	}
+
+	if (opt & ExpandRef) != 0 {
+
+		err := expandRef(root)
+		if err != nil {
+			return nil, fmt.Errorf("expandRef: %w", err)
+		}
 	}
 
 	//fmt.Println(root)
@@ -206,47 +229,110 @@ func New(root *dynajson.JSONElement) (JSONSchema, error) {
 }
 
 // NewByBytes ... func
-func NewByBytes(data []byte) (JSONSchema, error) {
+func NewByBytes(data []byte, opt NewOption) (JSONSchema, error) {
 
 	root, err := dynajson.NewByBytes(data)
 	if err != nil {
 		return nil, fmt.Errorf("dynajson.NewByBytes: %w", err)
 	}
 
-	return New(root)
+	return New(root, opt)
 }
 
 // NewByString ... func
-func NewByString(data string) (JSONSchema, error) {
+func NewByString(data string, opt NewOption) (JSONSchema, error) {
 
 	root, err := dynajson.NewByString(data)
 	if err != nil {
 		return nil, fmt.Errorf("dynajson.NewByString: %w", err)
 	}
 
-	return New(root)
+	return New(root, opt)
 }
 
 // NewByPath ... func
-func NewByPath(argPath string) (JSONSchema, error) {
+func NewByPath(argPath string, opt NewOption) (JSONSchema, error) {
 
 	root, err := dynajson.NewByPath(argPath)
 	if err != nil {
 		return nil, fmt.Errorf("%s: dynajson.NewByPath: %w", argPath, err)
 	}
 
-	return New(root)
+	return New(root, opt)
 }
 
 // ---------------------------------------------------------------------------
 
-type refInfoType struct {
-	selKey []interface{}
-	getKey []string
-	refVal string
+func setMinlenIfRequired(root *dynajson.JSONElement) error {
+
+	err := root.Walk(func(parents []interface{}, key interface{}, val interface{}) (bool, error) {
+
+		anyMap, ok := val.(map[string]interface{})
+		if !ok {
+			return true, nil
+		}
+
+		pRequired, ok := anyMap["required"]
+		if !ok {
+			return true, nil
+		}
+
+		bRequired, ok := pRequired.(bool)
+		if !ok {
+			return true, nil
+		}
+
+		if !bRequired {
+			return true, nil
+		}
+
+		pSchema, ok := anyMap["schema"]
+		if !ok {
+			return true, nil
+		}
+
+		mSchema, ok := pSchema.(map[string]interface{})
+		if !ok {
+			return true, nil
+		}
+
+		pType, ok := mSchema["type"]
+		if !ok {
+			return true, nil
+		}
+
+		sType, ok := pType.(string)
+		if !ok {
+			return true, nil
+		}
+
+		if sType != "string" {
+			return true, nil
+		}
+
+		if _, ok := mSchema["minLength"]; ok {
+			return true, nil
+		}
+
+		mSchema["minLength"] = 1
+
+		return true, nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("Walk: %w", err)
+	}
+
+	return nil
 }
 
 func expandRef(root *dynajson.JSONElement) error {
+
+	type refInfoType struct {
+		selKey []interface{}
+		getKey []string
+		refVal string
+	}
 
 	for {
 		var refInfo *refInfoType
