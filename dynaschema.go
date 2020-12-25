@@ -47,40 +47,6 @@ func (me *SchemaAbstract) String() string {
 	return me.objJSON.String()
 }
 
-/*
-type flagType struct {
-	SetMinlenIfRequired string
-}
-
-// Flag ... var
-var Flag flagType = flagType{
-	SetMinlenIfRequired: "SetMinlenIfRequired",
-}
-
-// SetFlag ... func
-func (me *SchemaAbstract) SetFlag(key string, val bool) {
-	if me.flagMap == nil {
-		me.flagMap = map[string]bool{}
-	}
-
-	me.flagMap[key] = val
-}
-
-// GetFlag ... func
-func (me *SchemaAbstract) GetFlag(key string) bool {
-
-	if me.flagMap == nil {
-		return false
-	}
-
-	if val, ok := me.flagMap[key]; ok {
-		return val
-	}
-
-	return false
-}
-*/
-
 // StrMap2AnyMap ... func
 func StrMap2AnyMap(arg map[string]string) map[string]interface{} {
 
@@ -143,19 +109,7 @@ func (me *SchemaAbstract) findParameterHelper(argPath, argMethod, argIn string, 
 		}
 
 		property := callback(spec)
-		/*
-			if spRequired {
-				if me.GetFlag(Flag.SetMinlenIfRequired) {
-					if propType, ok := property["type"]; ok {
-						if propType == "string" {
-							if _, ok := property["minLength"]; !ok {
-								property["minLength"] = 1
-							}
-						}
-					}
-				}
-			}
-		*/
+
 		properties.Put(spName, property)
 
 		return true, nil
@@ -267,6 +221,12 @@ func setMinlenIfRequired(root *dynajson.JSONElement) error {
 
 	err := root.Walk(func(parents []interface{}, key interface{}, val interface{}) (bool, error) {
 
+		//
+		// required が true であり、schema 中の type が string であり、minLength が設定されて
+		// いない場合は minLength=1 を付与する
+		//
+		// --> /exec?key=&val=10 のときに、key を有効な値として判定させないため
+		//
 		anyMap, ok := val.(map[string]interface{})
 		if !ok {
 			return true, nil
@@ -339,15 +299,15 @@ func expandRef(root *dynajson.JSONElement) error {
 
 		err := root.Walk(func(parents []interface{}, key interface{}, val interface{}) (bool, error) {
 
-			if key != "$ref" {
-				return true, nil
-			}
-
 			//
 			// map のキーが "$ref" のものを探し、その参照先とともに refInfo に設定する
 			// このとき、複数のものを一度に処理すると置き換え済に対する参照が発生してしまうので
 			// 一度の Walk() により行う検出と置換は 1 つのみとする
 			//
+			if key != "$ref" {
+				return true, nil
+			}
+
 			valStr, ok := val.(string)
 			if !ok {
 				return false, fmt.Errorf("%T: key=[%[1]v] val=[%v]: key-type not string", key, val)
